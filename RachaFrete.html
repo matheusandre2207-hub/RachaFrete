@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Haul — Frete Compartilhado</title>
+    
+    <!-- Configurações para Web App Instalável (PWA) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Haul%20Logistics%22,%22short_name%22:%22Haul%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%23ffffff%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/7544/7544957.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
+
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --surface: #ffffff;
+            --border: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent: #1e293b; /* Preto/Grafite sofisticado */
+            --accent-muted: #94a3b8;
+            --success: #0f766e; /* Verde sálvia/oceano minimalista */
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Container do Simulador Mobile */
+        .phone-frame {
+            width: 100%;
+            max-width: 393px;
+            height: 852px;
+            background-color: var(--bg-main);
+            border-radius: 40px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 10px solid #1e293b;
+        }
+
+        /* Se rodar direto instalado no celular, remove as bordas do simulador */
+        @media transform-3d, (-webkit-transform-3d) {
+            @media (display-mode: standalone) {
+                .phone-frame {
+                    max-width: 100%;
+                    height: 100vh;
+                    border: none;
+                    border-radius: 0;
+                }
+            }
+        }
+
+        /* Header Minimalista */
+        header {
+            background-color: var(--surface);
+            padding: 24px 20px 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        header h1 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        /* Botão de Instalar App */
+        .install-badge {
+            background: var(--text-primary);
+            color: white;
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: none;
+            font-weight: 500;
+        }
+
+        /* Área de Conteúdo */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 90px;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards Elegantes */
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(241, 245, 249, 0.8);
+        }
+
+        .sub-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* Seletores de Inventário */
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .inventory-item:last-child { border-bottom: none; }
+
+        .item-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .counter-control {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-main);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .counter-control button {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+        }
+
+        .counter-control .count {
+            font-size: 0.95rem;
+            font-weight: 600;
+            min-width: 14px;
+            text-align: center;
+        }
+
+        /* Banners de Sumário */
+        .summary-banner {
+            background-color: var(--accent);
+            color: var(--surface);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-banner span { font-size: 0.85rem; opacity: 0.8; letter-spacing: 0.05em; text-transform: uppercase; }
+        .summary-banner h3 { font-size: 1.6rem; font-weight: 500; }
+
+        /* Botões */
+        .btn-action {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--accent);
+            color: var(--surface);
+            border: none;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-action:active { opacity: 0.85; }
+        .btn-success { background-color: var(--success); }
+
+        /* Lances e Propostas */
+        .proposal-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .driver-meta h4 { font-size: 0.95rem; font-weight: 600; }
+        .driver-meta p { font-size: 0.8rem; color: var(--text-secondary); }
+
+        .price-select {
+            text-align: right;
+        }
+        .price-select .val { font-weight: 600; font-size: 1.1rem; margin-bottom: 6px; }
+        .btn-mini {
+            padding: 6px 14px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-mini:hover { background: var(--accent); color: white; }
+
+        /* Tokens e Conclusão */
+        .token-display {
+            background: var(--bg-main);
+            padding: 24px;
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            border-radius: 14px;
+            color: var(--accent);
+            margin: 16px 0;
+        }
+
+        /* Menu de Navegação Inferior */
+        nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            border-top: 1px solid var(--border);
+            height: 72px;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        nav button {
+            flex: 1;
+            border: none;
+            background: none;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--accent-muted);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        nav button svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--accent-muted);
+            fill: none;
+            transition: stroke 0.2s;
+        }
+
+        nav button.active { color: var(--text-primary); }
+        nav button.active svg { stroke: var(--text-primary); }
+    </style>
+</head>
+<body>
+
+    <div class="phone-frame">
+        <header>
+            <h1 id="view-title">Inventário</h1>
+            <div id="install-btn" class="install-badge">Baixar App</div>
+        </header>
+
+        <div class="content">
+            
+            <!-- TELA 1: INVENTÁRIO -->
+            <div id="screen-inventario" class="screen active">
+                <div class="summary-banner">
+                    <div>
+                        <span>Espaço Ocupado</span>
+                        <h3><span id="cubagem-num">0.00</span> m³</h3>
+                    </div>
+                    <!-- Ícone Vetorial Cubo -->
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+
+                <div class="card">
+                    <div class="inventory-item" data-volume="1.20">
+                        <div class="item-meta">
+                            <div class="item-label">Refrigerador Duplex</div>
+                            <div class="sub-text">Volume médio: 1.20 m³</div>
+                        </div>
+                        <div class="counter-control">
+                            <button onclick="atualizarItem(this, -1)">−</button>
+                            <span class="count">0</span>
+                            <button onclick="atualizarItem(this, 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="inventory-item" data-volume="1.50">
+                        <div class="item-meta">
+                            <div class="item-label">Sofá Minimalista (3L)</div>
+                            <div class="sub-text">Volume médio: 1.50 m³</div>
+                        </div>
+                        <div class="counter-control">
+                            <button onclick="atualizarItem(this, -1)">−</button>
+                            <span class="count">0</span>
+                            <button onclick="atualizarItem(this, 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="inventory-item" data-volume="0.15">
+                        <div class="item-meta">
+                            <div class="item-label">Caixa Organizadora</div>
+                            <div class="sub-text">Volume médio: 0.15 m³</div>
+                        </div>
+                        <div class="counter-control">
+                            <button onclick="atualizarItem(this, -1)">−</button>
+                            <span class="count">0</span>
+                            <button onclick="atualizarItem(this, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-action" onclick="publicarLeilao()">
+                    Solicitar Propostas
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+
+            <!-- TELA 2: LANCES REVERSOS -->
+            <div id="screen-leilao" class="screen">
+                <div class="card" style="background: #fafafa; border: 1px dashed #e2e8f0; display: flex; gap: 10px; align-items: center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <div class="sub-text" style="margin-top:0;">Rota Ativa: São Paulo ↔ Rio de Janeiro. Aguardando lances de motoristas parceiros.</div>
+                </div>
+
+                <div id="propostas-container" style="margin-top: 16px;">
+                    <!-- Inserido dinamicamente via JS -->
+                </div>
+            </div>
+
+            <!-- TELA 3: PAGAMENTO (ESCROW) -->
+            <div id="screen-pagamento" class="screen">
+                <div class="card" style="text-align: center; padding: 32px 20px;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="1.5" style="margin-bottom: 12px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <h3>Garantia de Transação</h3>
+                    <p class="sub-text">O valor contratado é mantido em segurança pela Haul e repassado ao transportador apenas após o término e validação da entrega.</p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span class="sub-text">Subtotal do Frete</span>
+                        <span id="checkout-subtotal" style="font-weight: 500;">R$ 0,00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span class="sub-text">Taxa de Proteção Logística</span>
+                        <span style="font-weight: 500; color: var(--success);">Inclusa</span>
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;">Total</span>
+                        <span id="checkout-total" style="font-weight: 700; font-size: 1.2rem;">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <button class="btn-action btn-success" onclick="processarPagamento()">Confirmar Custódia via PIX</button>
+            </div>
+
+            <!-- TELA 4: STATUS / TOKEN -->
+            <div id="screen-tracking" class="screen">
+                <div class="card" style="border-left: 4px solid var(--success);">
+                    <h3 style="color: var(--success);">Operação Agendada</h3>
+                    <p class="sub-text">Os motoristas participantes desta rota já consolidaram o espaço no manifesto.</p>
+                </div>
+
+                <div class="card" style="text-align: center;">
+                    <span class="sub-text" style="text-transform: uppercase; letter-spacing: 0.05em;">Token de Descarregamento</span>
+                    <div class="token-display">5921</div>
+                    <p class="sub-text">Apresente este código ao motorista no destino final apenas quando seus pertences forem entregues em conformidade.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Menu de Navegação Inferior -->
+        <nav id="app-nav">
+            <button id="nav-inventario" class="active" onclick="navegarAba('inventario', 'Inventário')">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Itens
+            </button>
+            <button id="nav-leilao" onclick="navegarAba('leilao', 'Propostas')">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                Lances
+            </button>
+            <button id="nav-pagamento" onclick="navegarAba('pagamento', 'Garantia')">
+                <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Checkout
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        let volumeTotal = 0.0;
+        let cotaFinal = 0;
+
+        function atualizarItem(btn, mod) {
+            const elCount = btn.parentElement.querySelector('.count');
+            let count = parseInt(elCount.innerText) + mod;
+            if (count < 0) return;
+            elCount.innerText = count;
+
+            const itemCard = btn.closest('.inventory-item');
+            const volUnitario = parseFloat(itemCard.getAttribute('data-volume'));
+
+            if (mod > 0) volumeTotal += volUnitario;
+            else volumeTotal -= volUnitario;
+
+            if (volumeTotal < 0) volumeTotal = 0;
+            document.getElementById('cubagem-num').innerText = volumeTotal.toFixed(2);
+        }
+
+        function navegarAba(screenId, title) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(`screen-${screenId}`).classList.add('active');
+            document.getElementById('view-title').innerText = title;
+            document.getElementById(`nav-${screenId}`).classList.add('active');
+        }
+
+        function publicarLeilao() {
+            if(volumeTotal <= 0) {
+                alert("Selecione os itens para cubagem antes de prosseguir.");
+                return;
+            }
+            
+            // Simulação de lances inteligentes baseados na cubagem calculada
+            const basePreco = volumeTotal * 295;
+            const propostas = [
+                { nome: "Augusto M. — Baú Toco", rating: "4.95", valor: basePreco * 0.90 },
+                { nome: "LogVans Eixo SP", rating: "4.88", valor: basePreco * 0.82 },
+                { nome: "Klaus Logística", rating: "5.0", valor: basePreco * 1.05 }
+            ];
+
+            const container = document.getElementById('propostas-container');
+            container.innerHTML = '';
+
+            propostas.sort((a,b) => a.valor - b.valor).forEach(p => {
+                container.innerHTML += `
+                    <div class="proposal-card">
+                        <div class="driver-meta">
+                            <h4>${p.nome}</h4>
+                            <p>★ ${p.rating} • Rota Consolidada</p>
+                        </div>
+                        <div class="price-select">
+                            <div class="val">R$ ${p.valor.toFixed(2)}</div>
+                            <button class="btn-mini" onclick="selecionarProposta(${p.valor})">Reservar</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            navegarAba('leilao', 'Propostas');
+        }
+
+        function selecionarProposta(valor) {
+            cotaFinal = valor;
+            document.getElementById('checkout-subtotal').innerText = `R$ ${valor.toFixed(2)}`;
+            document.getElementById('checkout-total').innerText = `R$ ${valor.toFixed(2)}`;
+            navegarAba('pagamento', 'Garantia');
+        }
+
+        function processarPagamento() {
+            alert("Enviando solicitação de PIX dinâmico com Split ativado...");
+            navegarAba('tracking', 'Acompanhamento');
+            document.getElementById('app-nav').style.display = 'none';
+        }
+
+        // --- LÓGICA DE INSTALAÇÃO DO APP (PWA) ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block'; // Mostra botão se for instalável
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+            console.log('App instalado com sucesso!');
+        });
+    </script>
+</body>
+</html>
